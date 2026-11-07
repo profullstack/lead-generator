@@ -1,10 +1,12 @@
 /**
  * AI Service Module
- * Handles OpenAI integration for template personalization
+ * Template personalization: c0mpute first (see ./c0mpute.js), OpenAI as the
+ * fallback when a key is set.
  */
 
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { createC0mpute } from './c0mpute.js';
 
 dotenv.config();
 
@@ -21,14 +23,24 @@ export class AIService {
       ...config
     };
 
-    if (!this.config.apiKey) {
+    // c0mpute first. `c0mpute: false` skips it; a router can be passed in.
+    this.c0mpute = config.c0mpute === false
+      ? null
+      : config.c0mpute || createC0mpute({
+        apiKey: config.c0mputeApiKey,
+        timeoutMs: config.c0mputeTimeoutMs
+      });
+
+    if (!this.config.apiKey && !config.client && !this.c0mpute) {
       throw new Error('OpenAI API key is required');
     }
 
     // Use provided client for testing, otherwise create new OpenAI client
-    this.client = config.client || new OpenAI({
-      apiKey: this.config.apiKey
-    });
+    this.client = config.client || (this.config.apiKey
+      ? new OpenAI({
+        apiKey: this.config.apiKey
+      })
+      : null);
   }
 
   /**
@@ -38,13 +50,34 @@ export class AIService {
    * @returns {Promise<string>} AI response
    */
   async generateCompletion(prompt, options = {}) {
+    const system = 'You are a professional sales email personalization assistant. Generate personalized, professional, and engaging content based on the provided information.';
+
+    if (this.c0mpute) {
+      try {
+        const { object } = await this.c0mpute.generateObject({
+          system,
+          user: prompt,
+          maxTokens: options.maxTokens || this.config.maxTokens,
+          temperature: options.temperature || this.config.temperature,
+          feature: 'lead-generator'
+        });
+        this.lastProvider = 'c0mpute';
+        return JSON.stringify(object);
+      } catch (error) {
+        if (!this.client) {
+          throw new Error(`AI completion failed: ${error.message}`);
+        }
+        console.warn(`c0mpute failed, falling back to OpenAI: ${error.message}`);
+      }
+    }
+
     try {
       const response = await this.client.chat.completions.create({
         model: this.config.model,
         messages: [
           {
             role: 'system',
-            content: 'You are a professional sales email personalization assistant. Generate personalized, professional, and engaging content based on the provided information.'
+            content: system
           },
           {
             role: 'user',
@@ -56,6 +89,7 @@ export class AIService {
         response_format: { type: 'json_object' }
       });
 
+      this.lastProvider = 'openai';
       return response.choices[0]?.message?.content;
     } catch (error) {
       if (error.status === 429) {

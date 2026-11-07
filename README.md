@@ -6,7 +6,7 @@ A powerful CLI tool and Node.js module for sending mass lead emails with AI-powe
 
 - 📧 **Mass Email Campaigns** - Send personalized emails to hundreds of leads
 - 📞 **Voice AI Cold-calling** - Automated cold calling with Bland.ai integration
-- 🤖 **AI Personalization** - OpenAI-powered template customization
+- 🤖 **AI Personalization** - template customization on c0mpute, with OpenAI as the fallback
 - 📊 **CSV Processing** - Import leads from CSV files with validation
 - 🎯 **Smart Templates** - 10 pre-built sales email templates
 - 📈 **Batch Processing** - Configurable batch sizes with rate limiting
@@ -43,7 +43,13 @@ Create a `.env` file with your API keys:
 MAILGUN_API_KEY=your_mailgun_api_key_here
 MAILGUN_DOMAIN=your_mailgun_domain_here
 
-# OpenAI Configuration (Required for AI personalization)
+# AI personalization runs on c0mpute first (no key needed: 10 free calls a day;
+# an Infernet account key ik_live_... lifts that). C0MPUTE_DISABLED=1 turns it off.
+C0MPUTE_API_KEY=your_infernet_account_key
+# c0mpute is slow: 60 to 240 s per lead is normal. Whole-call cap:
+C0MPUTE_TIMEOUT_MS=300000
+
+# OpenAI (fallback when c0mpute fails)
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Bland.ai Configuration (Required for voice calling)
@@ -445,7 +451,8 @@ MAILGUN_API_KEY=your_mailgun_api_key
 MAILGUN_DOMAIN=your_mailgun_domain
 MAILGUN_BASE_URL=https://api.mailgun.net
 
-# OpenAI Configuration (AI Personalization)
+# AI Personalization: c0mpute first, OpenAI fallback
+C0MPUTE_API_KEY=your_infernet_account_key
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_MAX_TOKENS=500
@@ -576,7 +583,7 @@ lead-generator/
 ├── src/
 │   ├── templates/            # Email templates
 │   ├── csv-parser.js         # CSV processing
-│   ├── ai-service.js         # OpenAI integration
+│   ├── ai-service.js         # AI personalization (c0mpute, OpenAI fallback)
 │   ├── email-service.js      # Mailgun integration
 │   └── voice-service.js      # Voice AI stub
 ├── test/                     # Test files

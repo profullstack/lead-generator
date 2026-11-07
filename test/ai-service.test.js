@@ -7,6 +7,10 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import { personalizeTemplate, generatePlaceholderValues, AIService } from '../src/ai-service.js';
 
+// The OpenAI tests below exercise the fallback path; c0mpute is covered in
+// its own block with a stub router.
+process.env.C0MPUTE_DISABLED = '1';
+
 describe('AI Service', () => {
   let aiService;
   let mockOpenAI;
@@ -195,9 +199,15 @@ Best,
     });
 
     it('should validate required configuration', () => {
-      expect(() => {
-        new AIService({});
-      }).to.throw('OpenAI API key is required');
+      const saved = process.env.OPENAI_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      try {
+        expect(() => {
+          new AIService({});
+        }).to.throw('OpenAI API key is required');
+      } finally {
+        if (saved !== undefined) process.env.OPENAI_API_KEY = saved;
+      }
     });
 
     it('should create prompt for template personalization', () => {
@@ -264,6 +274,47 @@ Best,
 
       expect(result.subject).to.equal('Hello John from [MISSING_FIELD]');
       expect(result.body).to.equal('Hi John.');
+    });
+  });
+
+  describe('c0mpute first', () => {
+    it('does not need an OpenAI key when c0mpute is available', () => {
+      const service = new AIService({ apiKey: '', c0mpute: { generateObject: sinon.stub() } });
+      expect(service.client).to.equal(null);
+    });
+
+    it('returns the c0mpute JSON and never calls OpenAI', async () => {
+      const c0mpute = { generateObject: sinon.stub().resolves({ object: { FIRST_NAME: 'Ada' }, provider: 'c0mpute' }) };
+      const service = new AIService({ apiKey: 'sk-test', client: mockOpenAI, c0mpute });
+
+      const text = await service.generateCompletion('prompt');
+
+      expect(JSON.parse(text)).to.deep.equal({ FIRST_NAME: 'Ada' });
+      expect(service.lastProvider).to.equal('c0mpute');
+      expect(mockOpenAI.chat.completions.create.called).to.equal(false);
+    });
+
+    it('falls back to OpenAI when c0mpute fails', async () => {
+      const c0mpute = { generateObject: sinon.stub().rejects(new Error('no node')) };
+      mockOpenAI.chat.completions.create.resolves({ choices: [{ message: { content: '{"FIRST_NAME":"Bo"}' } }] });
+      const service = new AIService({ apiKey: 'sk-test', client: mockOpenAI, c0mpute });
+
+      const text = await service.generateCompletion('prompt');
+
+      expect(JSON.parse(text)).to.deep.equal({ FIRST_NAME: 'Bo' });
+      expect(service.lastProvider).to.equal('openai');
+    });
+
+    it('throws the c0mpute error when there is no OpenAI fallback', async () => {
+      const c0mpute = { generateObject: sinon.stub().rejects(new Error('no node')) };
+      const service = new AIService({ apiKey: '', c0mpute });
+
+      try {
+        await service.generateCompletion('prompt');
+        expect.fail('should have thrown');
+      } catch (error) {
+        expect(error.message).to.equal('AI completion failed: no node');
+      }
     });
   });
 });
