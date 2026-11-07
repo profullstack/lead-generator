@@ -52,7 +52,16 @@ export {
   getAllTones
 } from './src/email-templates/index.js';
 
-// Import for internal use
+// Import for internal use (LeadGenerator calls these; `export ... from`
+// does not bind them in this module)
+import { processLeadsFromCSV } from './src/csv-parser.js';
+import {
+  personalizeTemplate,
+  batchPersonalize,
+  getPersonalizationStats
+} from './src/ai-service.js';
+import { sendBatchEmails } from './src/email-service.js';
+import { isC0mputeDisabled } from './src/c0mpute.js';
 import {
   templates as emailTemplates,
   getTemplateById as getEmailTemplateById,
@@ -98,7 +107,9 @@ export class LeadGenerator {
         apiKey: config.openaiApiKey || process.env.OPENAI_API_KEY,
         model: config.openaiModel || process.env.OPENAI_MODEL || 'gpt-4o-mini',
         maxTokens: config.openaiMaxTokens || parseInt(process.env.OPENAI_MAX_TOKENS) || 500,
-        temperature: config.openaiTemperature || parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7
+        temperature: config.openaiTemperature || parseFloat(process.env.OPENAI_TEMPERATURE) || 0.7,
+        // c0mpute is tried first; key defaults to C0MPUTE_API_KEY
+        c0mputeApiKey: config.c0mputeApiKey || process.env.C0MPUTE_API_KEY
       },
       
       // Sender information
@@ -237,8 +248,9 @@ export class LeadGenerator {
       errors.push('Sender name is required');
     }
 
-    // OpenAI is optional but warn if personalization is enabled
-    if (this.config.campaign.enablePersonalization && !this.config.openai.apiKey) {
+    // Personalization runs on c0mpute with no key; OpenAI is only required
+    // when C0MPUTE_DISABLED turns c0mpute off
+    if (this.config.campaign.enablePersonalization && !this.config.openai.apiKey && isC0mputeDisabled()) {
       errors.push('OpenAI API key is required for AI personalization (or disable personalization)');
     }
 

@@ -11,6 +11,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.4
         version: 1.14.4(hono@4.7.11)
+      '@profullstack/ai-providers':
+        specifier: 0.1.2
+        version: 0.1.2
       ansi-colors:
         specifier: ^4.1.3
         version: 4.1.3
@@ -192,6 +195,11 @@ packages:
     peerDependenciesMeta:
       '@types/node':
         optional: true
+
+  '@profullstack/ai-providers@0.1.2':
+    resolution: {integrity: sha512-nOcKaOhfcDM+RNruA4+znva5xXxI4HF77iqUCgieuou2w8yY8LIF2p5ajSVD4kzFtfIUjC7GhGV8eyOrliHg1w==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@sinonjs/commons@3.0.1':
     resolution: {integrity: sha512-K3mCHKQ9sVh8o1C9cxkwxaOmXoAMlDxC1mYyHrjqOWEcBjYr76t96zL2zlj5dUGZ3HSw240X1qgH3Mjf1yJWpQ==}
@@ -1029,6 +1037,8 @@ snapshots:
   '@inquirer/type@3.0.7(@types/node@18.19.111)':
     optionalDependencies:
       '@types/node': 18.19.111
+
+  '@profullstack/ai-providers@0.1.2': {}
 
   '@sinonjs/commons@3.0.1':
     dependencies:

@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { isC0mputeDisabled } from './c0mpute.js';
 
 /**
  * Get the path to the configuration file
@@ -78,7 +79,8 @@ export function validateConfig(config) {
     errors.push('Mailgun domain is required');
   }
 
-  if (!config?.ai?.openai?.apiKey || config.ai.openai.apiKey.trim() === '') {
+  // c0mpute needs no key, so OpenAI is only required when c0mpute is off
+  if (isC0mputeDisabled() && (!config?.ai?.openai?.apiKey || config.ai.openai.apiKey.trim() === '')) {
     errors.push('OpenAI API key is required');
   }
 

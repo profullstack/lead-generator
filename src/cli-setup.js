@@ -108,15 +108,14 @@ export async function promptForConfig() {
     }
   ]);
 
-  console.log('\n🤖 AI Configuration (OpenAI)');
+  console.log('\n🤖 AI Configuration (c0mpute first, OpenAI fallback)');
   console.log('----------------------------');
 
   const aiAnswers = await inquirer.prompt([
     {
       type: 'input',
       name: 'openaiApiKey',
-      message: 'OpenAI API Key:',
-      validate: (input) => input.trim() ? true : 'OpenAI API key is required'
+      message: 'OpenAI API Key (fallback; leave blank to use c0mpute only):'
     },
     {
       type: 'list',
